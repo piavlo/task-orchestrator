@@ -1,0 +1,23 @@
+orchestrator:
+  statedir: states
+  multistep:
+    description: multiple steps test
+    save: true
+    steps:
+      - type: parallel
+        parallel: 2
+        sleep: 0.1
+        scripts:
+          - command: sleep 5
+          - command: echo parallel 1
+          - command: echo parallel 2
+          - command: echo parallel 3
+          - command: echo parallel 4
+          - command: echo parallel 5
+      - type: sequential
+        scripts:
+          - command: echo sequential 1
+          - command: echo sequential 2
+          - command: echo sequential 3
+          - command: echo sequential 4
+          - command: echo sequential 5

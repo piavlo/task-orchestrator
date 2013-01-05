@@ -1,0 +1,15 @@
+orchestrator:
+  statedir: states
+  interpolation:
+    description: command interpolation test
+    save: true
+    steps:
+      - type: sequential
+        scripts:
+          - command: "echo :::ARG.name:::"
+          - command: "echo :::ARG.arg1:::"
+          - command: "echo :::ARG.arg2:::"
+          - command: "echo :::ENV.DNS:::"
+          - command: "echo :::EXEC.date:::"
+          - command: "echo :::EXEC./bin/date +%s:::"
+#          - command: "echo :::EXEC./dasdfsd:::"

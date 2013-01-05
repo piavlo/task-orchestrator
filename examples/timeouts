@@ -1,0 +1,40 @@
+orchestrator:
+  statedir: states
+  timeouts1:
+    description: timeouts test 1
+    save: true
+    steps:
+      - type: sequential
+#        on_failure: die
+        on_failure: ignore
+        scripts:
+           - command: sleep 1
+             timeout: 2
+           - command: sleep 5
+             timeout: 2
+  timeouts2:
+    description: timeouts test 2
+    save: true
+    steps:
+      - type: parallel
+        parallel: 2
+        sleep: 0.1
+#        on_failure: die
+#        on_failure: wait
+#        on_failure: finish
+        on_failure: ignore
+        scripts:
+           - command: sleep 1
+             timeout: 2
+           - command: sleep 1
+             timeout: 2
+           - command: sleep 1
+             timeout: 2
+           - command: sleep 5
+             timeout: 2
+           - command: sleep 1
+             timeout: 2
+           - command: sleep 1
+             timeout: 2
+           - command: sleep 1
+             timeout: 2

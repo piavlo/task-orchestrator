@@ -1,0 +1,13 @@
+orchestrator:
+  statedir: states
+  sequential:
+    description: lalalalal
+    save: true
+    steps:
+      - type: sequential
+        scripts:
+          - command: echo 1
+          - command: echo 2
+          - command: echo 3
+          - command: echo 4
+          - command: echo 5
