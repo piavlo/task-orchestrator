@@ -4,7 +4,7 @@ $:.unshift lib unless $:.include?(lib)
 require "orchestrator/version"
  
 Gem::Specification.new do |s|
-  s.name        = "task-orchestrator.gemspec"
+  s.name        = "task-orchestrator"
   s.version     = Orchestrator::VERSION
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Alexander Piavlo"]

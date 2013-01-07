@@ -6,5 +6,5 @@ task :build do
 end
  
 task :release => :build do
-  system "gem push task-orchestrator-#{Orchestrator::VERSION}"
+  system "gem push task-orchestrator-#{Orchestrator::VERSION}.gem"
 end
