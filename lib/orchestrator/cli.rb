@@ -14,7 +14,7 @@ module Orchestrator
       parser.banner = "Usage: #{$0} [options]"
 
       options.config = Orchestrator::Settings
-      parser.on( '--config [PATH]', 'Path to settings yaml' ) do |config|
+      parser.on( '--config PATH', String, 'Path to settings yaml' ) do |config|
         options.config = config
         options.args.instance_variable_set(:@config,config)
       end
@@ -26,7 +26,7 @@ module Orchestrator
         options.args.instance_variable_set(:@name,name)
       end
 
-      parser.on( '--statefile PATH', 'Path to state file yaml' ) do |statefile|
+      parser.on( '--statefile PATH', String, 'Path to state file yaml' ) do |statefile|
         options.statefile = statefile
         options.args.instance_variable_set(:@statefile,statefile)
       end
