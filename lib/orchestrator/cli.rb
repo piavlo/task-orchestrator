@@ -34,9 +34,9 @@ module Orchestrator
       options.reset = false
       parser.on( '--reset', 'Do not use state file if it exists' ) { |reset| options.reset = true }
 
-      parser.on( '--args ARGS,', 'extra args for interpolation as arg1=val1[,arg2=val2[]]' ) do |a|
-        a.split(',').each do |x|
-          arg,val = x.split('=')
+      parser.on( '--args ARGS,', Array, 'extra args for interpolation as arg1=val1,arg2=val2,...]' ) do |extra_args|
+        extra_args.each do |extra_arg|
+          arg,val = extra_arg.split('=')
           options.args.instance_variable_set("@#{arg}".to_sym,val)
         end
       end
