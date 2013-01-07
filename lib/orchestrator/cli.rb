@@ -55,7 +55,7 @@ module Orchestrator
       parser.parse!(args)
 
       unless options.name
-        puts opts
+        puts parser
         exit 1 
       end
 
