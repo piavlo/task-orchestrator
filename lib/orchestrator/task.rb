@@ -31,10 +31,10 @@ module Orchestrator
       @state = (@options.statefile && File.exist?(@options.statefile) && !@options.reset) ? YAML.load_file(@options.statefile) : @settings['orchestrator'][@options.name]
 
       @options.email = false unless @state.has_key?('email')
-      @options.email_on_success = (@options.email and @state['email'].has_key?('on_success')) ? @state['email']['on_success']) : true
+      @options.email_on_success = (@options.email and @state['email'].has_key?('on_success')) ? @state['email']['on_success'] : true
 
       @options.sms = false unless @state.has_key?('sms')
-      @options.sms_on_success = (@options.sms and @state['sms'].has_key?('on_success')) ? @state['sms']['on_success']) : false
+      @options.sms_on_success = (@options.sms and @state['sms'].has_key?('on_success')) ? @state['sms']['on_success'] : false
     end
 
     def invalid(reason)
