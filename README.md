@@ -2,6 +2,8 @@
 
 Simple task orchestration framework driven by Yaml config files
 
+![travis](https://secure.travis-ci.org/piavlo/task-orchestrator.png)
+
 ## Installation
 
 Add this line to your application's Gemfile:
