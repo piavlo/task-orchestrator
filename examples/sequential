@@ -1,7 +1,7 @@
 orchestrator:
   statedir: states
   sequential:
-    description: lalalalal
+    description: sequential test
     save: true
     steps:
       - type: sequential

@@ -79,6 +79,10 @@ module Orchestrator
     end
 
     def validate_config
+      if @state.has_key?('failure_handler')
+         invalid("failure handler is invalid") unless @state['failure_handler'].is_a?(String)
+         @state['failure_handler'] = { 'command' => interpolate_command(@state['failure_handler']) }
+      end
       if @state.has_key?('email')
         invalid("config email recipients is missing or invalid") unless @state['email'].has_key?('recipients') && @state['email']['recipients'].is_a?(String) || @state['email']['recipients'].is_a?(Array)
         invalid("config email from is missing or invalid") unless @state['email'].has_key?('from') && @state['email']['from'].is_a?(String)
@@ -111,7 +115,7 @@ module Orchestrator
     end
 
     def fail
-      system "#{@state['failure_handler']} #{@state['failure_handler_args']}" if @state.has_key?('failure_handler')
+      system "#{@state['failure_handler']['command']}" if @state.has_key?('failure_handler')
 
       Pony.mail(
         :to => @state['email']['recipients'],

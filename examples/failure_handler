@@ -1,0 +1,10 @@
+orchestrator:
+  statedir: states
+  failure_handler:
+    description: failure handler test
+    save: true
+    steps:
+      - type: sequential
+        scripts:
+          - exit 0
+    failure_handler: "echo Task :::ARG.name::: has failed"
