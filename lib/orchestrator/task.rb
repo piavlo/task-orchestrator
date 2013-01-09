@@ -82,11 +82,12 @@ module Orchestrator
       if command.is_a?(String)
          command = { 'command' => interpolate_command(command) }
       elsif command.is_a?(Hash)
-        invalid(error_prefix + " command is invalid") unless command.has_key?('command') && command.is_a?(String)
+        invalid(error_prefix + " command is invalid") unless command.has_key?('command') && command['command'].is_a?(String)
         command['command'] = interpolate_command(command['command'])
       else
         invalid(error_prefix + " is invalid")
       end
+      command
     end
 
     def validate_config
