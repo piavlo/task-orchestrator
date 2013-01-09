@@ -7,4 +7,5 @@ orchestrator:
       - type: sequential
         scripts:
           - exit 0
+        failure_handler: "echo Step has failed"
     failure_handler: "echo Task :::ARG.name::: has failed"

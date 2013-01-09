@@ -78,11 +78,19 @@ module Orchestrator
       end
     end
 
-    def validate_config
-      if @state.has_key?('failure_handler')
-         invalid("failure handler is invalid") unless @state['failure_handler'].is_a?(String)
-         @state['failure_handler'] = { 'command' => interpolate_command(@state['failure_handler']) }
+    def validate_command(command,error_prefix)
+      if command.is_a?(String)
+         command = { 'command' => interpolate_command(command) }
+      elsif command.is_a?(Hash)
+        invalid(error_prefix + " command is invalid") unless command.has_key?('command') && command.is_a?(String)
+        command['command'] = interpolate_command(command['command'])
+      else
+        invalid(error_prefix + " is invalid")
       end
+    end
+
+    def validate_config
+      @state['failure_handler'] = validate_command(@state['failure_handler'], 'task failure handler') if @state.has_key?('failure_handler')
       if @state.has_key?('email')
         invalid("config email recipients is missing or invalid") unless @state['email'].has_key?('recipients') && @state['email']['recipients'].is_a?(String) || @state['email']['recipients'].is_a?(Array)
         invalid("config email from is missing or invalid") unless @state['email'].has_key?('from') && @state['email']['from'].is_a?(String)
@@ -101,21 +109,16 @@ module Orchestrator
         invalid("task step has no type") unless step.has_key?('type') && step['type'].is_a?(String)
         invalid("task step type #{step['type']} is invalid") unless [:parallel,:sequential].find_index(step['type'].to_sym)
         invalid("task step scripts is missing or invalid") unless step.has_key?('scripts') && step['scripts'].is_a?(Array)
+        step['failure_handler'] = validate_command(step['failure_handler'], 'task failure handler') if step.has_key?('failure_handler')
         step['scripts'].each_index do |index|
-          if step['scripts'][index].is_a?(String)
-            step['scripts'][index] = { 'command' => interpolate_command(step['scripts'][index]) }
-          elsif step['scripts'][index].is_a?(Hash)
-            invalid("task step script command is invalid") unless step['scripts'][index].has_key?('command') && step['scripts'][index]['command'].is_a?(String)
-            step['scripts'][index]['command'] = interpolate_command(step['scripts'][index]['command'])
-          else
-            invalid("task script is invalid")
-          end
+          step['scripts'][index] = validate_command(step['scripts'][index], 'task step script')
         end
       end
     end
 
     def fail
-      system "#{@state['failure_handler']['command']}" if @state.has_key?('failure_handler')
+      run_script(@failure_handler) if @failure_handler
+      run_script(@state['failure_handler']) if @state.has_key?('failure_handler')
 
       Pony.mail(
         :to => @state['email']['recipients'],
@@ -242,12 +245,13 @@ EOF
         @retry_delay = step.has_key?('retry_delay') ? step['retry_delay'] : 0
         @on_week_days = step.has_key?('on_week_days') ? step['on_week_days'].map{|d| "#{d}?".downcase.to_sym} : [ :sunday?, :monday?, :tuesday?, :wednesday?, :thursday?, :friday?, :saturday? ]
         @on_month_days = step.has_key?('on_month_days') ? step['on_month_days'] : (1..31).to_a
+        @failure_handler = step.has_key?('failure_handler') ? step['failure_handler'] : nil
 
         if step['type'].to_sym == :parallel and @on_week_days.map {|d| Time.now.send(d) }.find_index(true) and @on_month_days.find_index(Time.now.mday)
           #Parallel
           interval = step.has_key?('sleep') ? step['sleep'] : 1
-          @on_failure = step.has_key?('on_failure') ? step['on_failure'].to_sym : :finish
           parallel_factor = step.has_key?('parallel') ? step['parallel'] : 1
+          @on_failure = step.has_key?('on_failure') ? step['on_failure'].to_sym : :finish
 
           @threads = Hash.new
           index = 0
