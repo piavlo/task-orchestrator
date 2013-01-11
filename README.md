@@ -2,7 +2,9 @@
 
 Simple task orchestration framework driven by Yaml config files
 
-![travis](https://secure.travis-ci.org/piavlo/task-orchestrator.png)
+![Build Status](https://secure.travis-ci.org/piavlo/task-orchestrator.png)
+[![Dependency Status](https://gemnasium.com/piavlo/task-orchestrator.png)](https://gemnasium.com/piavlo/task-orchestrator)
+[![Code Climate](https://codeclimate.com/badge.png)](https://codeclimate.com/github/piavlo/task-orchestrator)
 
 ## Installation
 
