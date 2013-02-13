@@ -8,9 +8,9 @@ orchestrator:
 #        on_failure: die
         on_failure: ignore
         scripts:
-           - command: sleep 1
-             timeout: 2
            - command: sleep 5
+             timeout: 2
+           - command: sleep 1
              timeout: 2
   timeouts2:
     description: timeouts test 2

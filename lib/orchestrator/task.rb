@@ -82,10 +82,15 @@ module Orchestrator
       if command.is_a?(String)
          command = { 'command' => interpolate_command(command) }
       elsif command.is_a?(Hash)
-        invalid(error_prefix + " command is invalid") unless command.has_key?('command') && command['command'].is_a?(String)
-        command['command'] = interpolate_command(command['command'])
+        invalid(error_prefix + " is missing command attribute") unless command.has_key?('command')
+        ['command', 'ok_handler', 'failure_handler'].each do |attribute|
+          if command.has_key?(attribute)
+            invalid(error_prefix + " #{attribute} attribute is invalid") unless command[attribute].is_a?(String)
+            command[attribute] = interpolate_command(command[attribute])
+          end
+        end
       else
-        invalid(error_prefix + " is invalid")
+        invalid(error_prefix + " has invalid format")
       end
       command
     end
@@ -154,30 +159,24 @@ module Orchestrator
       ) if @options.sms and @options.sms_on_success
     end
 
-    def run_script(script)
+    def run_command(command,timeout)
       result = ""
       error = ""
 
-      timeout = script.has_key?('timeout') ? script['timeout'].to_i : @timeout
-
-      script['status'] = 'STARTED'
-      save_state
-
       #  start = Time.now
-
+      
+      status = 'STARTED'
       begin
         Timeout::timeout(timeout) do
-          status = POpen4::popen4(script['command']) do |stdout, stderr, stdin, pid|
+          status = POpen4::popen4(command) do |stdout, stderr, stdin, pid|
             result = stdout.read.strip
             error = stderr.read.strip
           end
-          script['status'] = (status.nil? or status.exitstatus != 0) ? 'FAILED' : 'OK'
+          status = (status.nil? or status.exitstatus != 0) ? 'FAILED' : 'OK'
         end
       rescue Timeout::Error
-        script['status'] = 'TIMEOUT'
+        status = 'TIMEOUT'
       end
-
-      save_state
 
       #  runtime = Time.now - start
       #  runtime = runtime > 60 ? runtime/60 : runtime
@@ -185,7 +184,7 @@ module Orchestrator
       @mutex.synchronize do
         output = <<-EOF
 
-Running: #{script['command']} - #{script['status']}
+Running: #{command} - #{status}
 ============ STDOUT ============
 #{result}
 ============ STDERR ============
@@ -197,7 +196,31 @@ EOF
         puts output if @options.verbose
       end
 
-      script['status'] == 'OK'
+      return status
+    end
+
+    def run_post_script_handlers(script,status)
+      handler = nil
+      if status
+        handler = 'ok_handler' if script.has_key?('ok_handler')
+      else
+        handler = 'failure_handler' if script.has_key?('failure_handler')
+      end
+      if handler
+        timeout = script.has_key?('timeout') ? script['timeout'].to_i : @timeout
+        run_command(script[handler],timeout)
+      end
+    end
+
+    def run_script(script)
+      timeout = script.has_key?('timeout') ? script['timeout'].to_i : @timeout
+
+      script['status'] = 'STARTED'
+      save_state
+      script['status'] = run_command(script['command'],timeout)
+      save_state
+    
+      return script['status'] == 'OK'
     end
 
     def thread_wrapper(i,script)
@@ -231,6 +254,7 @@ EOF
       end
 
       @threads.delete(i)
+      run_post_script_handlers(script,@statuses[i])
       fail if @on_failure == :die and not @statuses[i]
     end
 
@@ -295,6 +319,7 @@ EOF
               break if failures > @retries
               sleep @retry_delay
             end
+            run_post_script_handlers(step['scripts'][index],@statuses[index])
             fail if not @statuses[index] and @on_failure == :die
           end
           fail if @on_failure != :ignore and @statuses.find_index(false)
