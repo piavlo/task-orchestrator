@@ -3,13 +3,22 @@ orchestrator:
   interpolation:
     description: command interpolation test
     save: true
+    defaults:
+      args:
+        arg1: zopa
+        arg2: popa
+        arg3:
+      envs:
+        DNS: google.com
+        DHCP:
     steps:
       - type: sequential
         scripts:
-          - command: "echo :::ARG.name:::"
-          - command: "echo :::ARG.arg1:::"
-          - command: "echo :::ARG.arg2:::"
-          - command: "echo :::ENV.DNS:::"
-          - command: "echo :::EXEC.date:::"
-          - command: "echo :::EXEC./bin/date +%s:::"
-#          - command: "echo :::EXEC./dasdfsd:::"
+          - command: "echo name is  :::ARG.name:::"
+          - command: "echo arg1 is :::ARG.arg1:::"
+          - command: "echo arg2 is :::ARG.arg2:::"
+          - command: "echo arg3 is :::ARG.arg3:::"
+          - command: "echo DNS is :::ENV.DNS:::"
+          - command: "echo DHCP is :::ENV.DHCP:::"
+          - command: "echo DATE is :::EXEC.date:::"
+          - command: "echo UNIX_TIMESTAMP is :::EXEC./bin/date +%s:::"

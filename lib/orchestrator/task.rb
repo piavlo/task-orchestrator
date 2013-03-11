@@ -16,6 +16,10 @@ module Orchestrator
 
       @options = options
 
+      @defaults = {}
+      @defaults[:envs] = Object.new
+      @defaults[:args] = Object.new
+
       invalid("config file #{config} does not exists") unless File.exist?(@options.config)
 
       @settings = YAML.load_file(@options.config)
@@ -56,12 +60,12 @@ module Orchestrator
         case match
         when /^ENV\./
           env = match["ENV.".length..-1]
-          invalid("command interpolation failed no such env variable - #{env}") unless ENV[env]
-          ENV[env]
+          invalid("command interpolation failed no such env variable - #{env}") if !ENV[env] and !@defaults[:envs].instance_variable_defined?("@#{env}")
+          ENV[env] ? ENV[env] : @defaults[:envs].instance_variable_get("@#{env}")
         when /^ARG\./
           arg = match["ARG.".length..-1]
-          invalid("command interpolation failed no such arg - #{arg}") unless @options.args.instance_variable_defined?("@#{arg}".to_sym)
-          @options.args.instance_variable_get("@#{arg}".to_sym)
+          invalid("command interpolation failed no such arg - #{arg}") if !@options.args.instance_variable_defined?("@#{arg}") and !@defaults[:args].instance_variable_defined?("@#{arg}")
+          @options.args.instance_variable_defined?("@#{arg}") ? @options.args.instance_variable_get("@#{arg}") : @defaults[:args].instance_variable_get("@#{arg}")
         when /^EXEC\./
           exec = match["EXEC.".length..-1]
           result = nil
@@ -104,6 +108,17 @@ module Orchestrator
       if @state.has_key?('sms')
         invalid("task sms recipients is missing") unless @state['sms'].has_key?('recipients') && @state['sms']['recipients'].is_a?(String) || @state['sms']['recipients'].is_a?(Array)
         invalid("task sms from is missing") unless @state['sms'].has_key?('from') && @state['sms']['from'].is_a?(String)
+      end
+      if @state.has_key?('defaults')
+        invalid("defaults must be hash") unless @state['defaults'].is_a?(Hash)
+        [:envs, :args].each do |type|
+          if @state['defaults'].has_key?(type.to_s)
+            invalid("default envs must be hash") unless @state['defaults'][type.to_s].is_a?(Hash)
+            @state['defaults'][type.to_s].each do|key,value|
+              @defaults[type].instance_variable_set("@#{key}",value)
+            end
+          end
+        end
       end
       invalid("task description is missing or invalid") unless @state.has_key?('description') && @state['description'].is_a?(String)
       invalid("task save must be boolean") if @state.has_key?('save') && !!@state['save'] != @state['save']
