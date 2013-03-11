@@ -54,9 +54,11 @@ module Orchestrator
       end
     end
 
-    def interpolate_command(command)
+    def interpolate_command(command,pattern=/^(ENV|ARG|EXEC)\./)
       command.gsub(/:::([^:]*):::/) do
         match = $1
+        invalid("interpolation type is not valid in this context - :::#{match}:::") if match !~ pattern and match =~ /^(ENV|ARG|EXEC)\./
+
         case match
         when /^ENV\./
           env = match["ENV.".length..-1]
@@ -115,7 +117,9 @@ module Orchestrator
           if @state['defaults'].has_key?(type.to_s)
             invalid("default envs must be hash") unless @state['defaults'][type.to_s].is_a?(Hash)
             @state['defaults'][type.to_s].each do|key,value|
-              @defaults[type].instance_variable_set("@#{key}",value)
+              value = '' unless value
+              invalid("default value for #{type} #{key} is invalid") unless value.is_a?(String)
+              @defaults[type].instance_variable_set("@#{key}",interpolate_command(value,/^EXEC\./))
             end
           end
         end

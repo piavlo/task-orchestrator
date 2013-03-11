@@ -8,9 +8,11 @@ orchestrator:
         arg1: zopa
         arg2: popa
         arg3:
+        cmd: ":::EXEC.date:::"
       envs:
         DNS: google.com
         DHCP:
+        CMD: ":::EXEC.date:::"
     steps:
       - type: sequential
         scripts:
@@ -18,7 +20,9 @@ orchestrator:
           - command: "echo arg1 is :::ARG.arg1:::"
           - command: "echo arg2 is :::ARG.arg2:::"
           - command: "echo arg3 is :::ARG.arg3:::"
+          - command: "echo arg3 is :::ARG.cmd:::"
           - command: "echo DNS is :::ENV.DNS:::"
           - command: "echo DHCP is :::ENV.DHCP:::"
+          - command: "echo DATE is :::ENV.CMD:::"
           - command: "echo DATE is :::EXEC.date:::"
           - command: "echo UNIX_TIMESTAMP is :::EXEC./bin/date +%s:::"
