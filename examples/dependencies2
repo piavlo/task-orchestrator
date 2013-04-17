@@ -1,0 +1,42 @@
+orchestrator:
+  statedir: states
+  dependencies:
+    description: lalalalal
+    save: true
+    steps:
+      - type: parallel
+        parallel: 2
+        scripts:
+          - command: sleep 6
+            timeout: 3
+            tags: [ zopa, popa ]
+          - command: sleep 5
+            timeout: 10
+            tags: [ kaka, popa ]            
+          - command: sleep 5
+            depends: zopa
+            tags: kuka
+          - command: sleep 5
+            depends: kuka
+          - command: sleep 5
+            depends: [ zopa, kaka ]
+  dependencies2:
+    description: sequntial part
+    save: false         
+    steps:        
+      - type: sequential
+        on_failure: ignore
+        scripts:
+          - command: sleep 6
+            timeout: 3
+            tags: zopa 
+          - command: sleep 5
+            timeout: 10
+            tags: [ kaka, popa ]            
+          - command: sleep 5
+            depends: zopa
+            tags: kuka
+          - command: sleep 5
+          - command: sleep 5
+            depends: [ zopa, kuka ]      
+           
