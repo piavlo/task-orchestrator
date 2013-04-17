@@ -15,7 +15,7 @@ module Orchestrator
       @log = ''
 
       @options = options
-
+      @failed_tags = []
       @defaults = {}
       @defaults[:envs] = Object.new
       @defaults[:args] = Object.new
@@ -94,6 +94,15 @@ module Orchestrator
             invalid(error_prefix + " #{attribute} attribute is invalid") unless command[attribute].is_a?(String)
             command[attribute] = interpolate_command(command[attribute])
           end
+        end
+        ### Rita - format validation for statfile tags and dependcies lists
+        if command.has_key?('command')
+          tags = command.has_key?('tags') ? command['tags'] : []
+          tags = [tags] if tags.is_a?(String)  
+          command['tags'] = tags
+          depends = command.has_key?('depends') ? command['depends'] : []
+          depends = [depends] if depends.is_a?(String)    
+          command['depends'] = depends
         end
       else
         invalid(error_prefix + " has invalid format")
@@ -223,7 +232,12 @@ EOF
       if status
         handler = 'ok_handler' if script.has_key?('ok_handler')
       else
-        handler = 'failure_handler' if script.has_key?('failure_handler')
+        ## update failed_tags after scipt failure 
+        tags = script['tags'] #validate_config ensured format corectness
+        @mutex.synchronize do
+          @failed_tags |= tags
+        end  
+        handler = 'failure_handler' if script.has_key?('failure_handler') 
       end
       if handler
         timeout = script.has_key?('timeout') ? script['timeout'].to_i : @timeout
@@ -296,24 +310,38 @@ EOF
           interval = step.has_key?('sleep') ? step['sleep'] : 1
           parallel_factor = step.has_key?('parallel') ? step['parallel'] : 1
           @on_failure = step.has_key?('on_failure') ? step['on_failure'].to_sym : :finish
-
+          print "PARALLEL: on_failure = #{@on_failure}\n "
           @threads = Hash.new
           index = 0
           running_threads = 0
 
           step['scripts'].each_index do |index|
             next if step['scripts'][index].has_key?('status') and step['scripts'][index]['status'] == 'OK'
-            loop do
-              @mutex.synchronize do
-                running_threads = @threads.length
+            ##check for dependencies
+            depends =  step['scripts'][index]['depends']  # validate_command ensures the format of depends list.
+            
+            if (depends&@failed_tags).any?                         
+              tags = step['scripts'][index]['tags'] #validate_command ensure format of the tags list.
+              @mutex.synchronize do 
+                @failed_tags |= tags
+              end  
+              step['scripts'][index]['status'] = 'DEPENDENCY'
+              save_state
+              @statuses[index] = false
+                         
+            else  
+              loop do
+                @mutex.synchronize do
+                  running_threads = @threads.length
+                end
+                break if @on_failure == :wait and @statuses.find_index(false)
+                if parallel_factor > running_threads
+                  @threads[index] = Thread.new { thread_wrapper(index, step['scripts'][index]) }
+                  break
+                end
+                sleep interval
               end
-              break if @on_failure == :wait and @statuses.find_index(false)
-              if parallel_factor > running_threads
-                @threads[index] = Thread.new { thread_wrapper(index, step['scripts'][index]) }
-                break
-              end
-              sleep interval
-            end
+            end  
           end
           loop do
             @mutex.synchronize do
@@ -327,18 +355,33 @@ EOF
         elsif step['type'].to_sym == :sequential and @on_week_days.map {|d| Time.now.send(d) }.find_index(true) and @on_month_days.find_index(Time.now.mday)
           #Sequential
           @on_failure = step.has_key?('on_failure') ? step['on_failure'].to_sym : :die
-
+          print "SEQUENTIAL: on_failure = #{@on_failure}\n "
           step['scripts'].each_index do |index|
             failures = 0
             next if step['scripts'][index].has_key?('status') and step['scripts'][index]['status'] == 'OK'
-            loop do
-              @statuses[index] = run_script(step['scripts'][index])
-              break if @statuses[index]
-              failures += 1
-              break if failures > @retries
-              sleep @retry_delay
-            end
-            run_post_script_handlers(step['scripts'][index],@statuses[index])
+            ##check for dependencies       
+            depends =  step['scripts'][index]['depends']  # validate_command ensures format of the depends list.
+            
+            if (depends&@failed_tags).any? 
+              tags = step['scripts'][index].has_key?('tags') ? step['scripts'][index]['tags'] : []
+              tags = [tags] if tags.is_a?(String) 
+              @mutex.synchronize do 
+                @failed_tags |= tags
+              end  
+              step['scripts'][index]['status'] = 'DEPENDENCY'
+              save_state
+              @statuses[index] = false 
+            else  
+
+              loop do
+                @statuses[index] = run_script(step['scripts'][index])
+                break if @statuses[index]
+                failures += 1
+                break if failures > @retries
+                sleep @retry_delay
+              end
+            end  
+            run_post_script_handlers(step['scripts'][index], @statuses[index])
             fail if not @statuses[index] and @on_failure == :die
           end
           fail if @on_failure != :ignore and @statuses.find_index(false)

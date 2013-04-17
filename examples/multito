@@ -1,0 +1,71 @@
+orchestrator:
+  statedir: states
+  timeouts1:
+    description: timeouts test 1
+    save: true
+    steps:
+      - type: sequential
+        on_failure: ignore
+        scripts:
+           - command: sleep 5
+             timeout: 2
+             tags: zopa
+           - command: sleep 1
+             timeout: 2
+           - command: sleep 5
+             timeout: 2
+             tags:  [dd]
+           - command: sleep 1
+             timeout: 2
+             tags:  [defe]
+             depends: [fsaf, tyhth, dd]
+             tags:    zopa
+           - command: sleep 1
+             timeout: 2
+             depends: [zopa]
+
+  multito:
+    description: timeouts test 2
+    save: true
+    steps:
+      - type: parallel
+        parallel: 2
+        sleep: 0.1
+#        on_failure: die
+#        on_failure: wait
+#        on_failure: finish
+        on_failure: ignore
+        scripts:
+           - command: sleep 1
+             timeout: 2
+           - command: sleep 3
+             timeout: 2
+             tags: dd
+           - command: sleep 1
+             timeout: 2
+           - command: sleep 5
+             timeout: 2
+             tags:  [dd,ff]
+             depends: dd
+           - command: sleep 1
+             timeout: 2
+             depends: dd
+             tags:    zopa
+           - command: sleep 1
+             timeout: 2
+             depends: [ff, zopa]
+           - command: sleep 1
+             timeout: 2
+      - type: sequential
+        on_failure: die
+        scripts:
+          - command: echo sequential 1
+          - command: echo sequential 2
+            depends: [ff, zopa]
+          - command: echo sequential 3
+          - command: echo sequential 4
+            depends: dd
+          - command: sleep 5
+            timeout: 3
+          - command: echo sequential 5
+          - command: echo THE END
