@@ -4,6 +4,7 @@ require 'yaml'
 require 'timeout'
 require 'formatador'
 require 'fileutils'
+require 'pp'
 
 module Orchestrator
 
@@ -13,6 +14,8 @@ module Orchestrator
       @mutex = Mutex.new
       Thread.abort_on_exception = true
       @log = ''
+
+      @children = {}
 
       @options = options
 
@@ -32,7 +35,51 @@ module Orchestrator
           FileUtils.mkdir_p(@settings['orchestrator']['statedir'])
         end
       end
-      @state = (@options.statefile && File.exist?(@options.statefile) && !@options.reset) ? YAML.load_file(@options.statefile) : @settings['orchestrator'][@options.name]
+
+      if @options.statefile
+        if File.exist?(@options.statefile)
+          File.open(@options.statefile, "r") do |file|
+            @got_lock = file.flock( File::LOCK_NB | File::LOCK_EX )
+          end
+          unless @got_lock
+            if @options.kill
+              @state = YAML.load_file(@options.statefile)
+              begin
+                Process.kill("TERM", @state['pid']) if @state.has_key?('pid')
+              rescue Errno::ESRCH
+              end
+              sleep 0.1
+              File.open(@options.statefile, "r") do |file|
+                @got_lock = file.flock( File::LOCK_NB | File::LOCK_EX )
+              end
+            end
+            invalid("The state file #{@options.statefile} is already locked by other process") unless @got_lock
+          end
+        end
+
+        @state = @options.reset ? YAML.load_file(@options.statefile) : @settings['orchestrator'][@options.name]
+        @state['pid'] = Process.pid
+
+        @statefile_handle = File.open(@options.statefile, "w")
+        @statefile_handle.flock( File::LOCK_NB | File::LOCK_EX )
+        @statefile_handle.sync = true
+        ### @statefile_handle.close_on_exec = true
+        Signal.trap("TERM") do
+          @children.each do |pid, command|
+            begin
+              Process.kill("TERM", pid)
+            rescue Errno::ESRCH
+            end
+            puts "KILLED #{pid}: #{command}\n" if @options.verbose
+            @log += "KILLED #{pid}: #{command}\n"
+          end
+          puts "KILLED ORCHESTRATOR\n" if @options.verbose
+          @log += "KILLED ORCHESTRATOR\n"
+          fail
+        end
+      else
+        @state = @settings['orchestrator'][@options.name]
+      end
 
       @options.email = false unless @state.has_key?('email')
       @options.email_on_success = (@options.email and @state['email'].has_key?('on_success')) ? @state['email']['on_success'] : true
@@ -49,7 +96,8 @@ module Orchestrator
     def save_state
       if @options.statefile
         @mutex.synchronize do
-          File.open(@options.statefile, "w") {|f| YAML.dump(@state, f)}
+          @statefile_handle.rewind
+          YAML.dump(@state, @statefile_handle)
         end
       end
     end
@@ -185,9 +233,12 @@ module Orchestrator
       #  start = Time.now
       
       status = 'STARTED'
+      child = nil
       begin
         Timeout::timeout(timeout) do
           status = POpen4::popen4(command) do |stdout, stderr, stdin, pid|
+            @children[pid] = command
+            child = pid
             result = stdout.read.strip
             error = stderr.read.strip
           end
@@ -196,6 +247,8 @@ module Orchestrator
       rescue Timeout::Error
         status = 'TIMEOUT'
       end
+
+      @children.delete(child) if child
 
       #  runtime = Time.now - start
       #  runtime = runtime > 60 ? runtime/60 : runtime

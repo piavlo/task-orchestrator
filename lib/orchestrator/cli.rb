@@ -32,7 +32,10 @@ module Orchestrator
       end
 
       options.reset = false
-      parser.on( '--reset', 'Do not use state file if it exists' ) { |reset| options.reset = true }
+      parser.on( '--reset', 'Do not use state file if it exists' ) { options.reset = true }
+
+      options.kill = false
+      parser.on( '--kill', 'Kill running task based on statefile pid then lock can not be aquired' ) { options.kill = true }
 
       parser.on( '--args ARGS,', Array, 'extra args for interpolation as arg1=val1,arg2=val2,...]' ) do |extra_args|
         extra_args.each do |extra_arg|
