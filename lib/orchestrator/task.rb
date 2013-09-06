@@ -96,6 +96,12 @@ module Orchestrator
     def save_state
       if @options.statefile
         @mutex.synchronize do
+          unless File.exist?(@options.statefile)
+            @statefile_handle.close
+            @statefile_handle = File.open(@options.statefile, "w")
+            @statefile_handle.flock( File::LOCK_NB | File::LOCK_EX )
+            @statefile_handle.sync = true
+          end
           @statefile_handle.rewind
           YAML.dump(@state, @statefile_handle)
         end
