@@ -160,10 +160,12 @@ module Orchestrator
       if @state.has_key?('email')
         invalid("config email recipients is missing or invalid") unless @state['email'].has_key?('recipients') && @state['email']['recipients'].is_a?(String) || @state['email']['recipients'].is_a?(Array)
         invalid("config email from is missing or invalid") unless @state['email'].has_key?('from') && @state['email']['from'].is_a?(String)
+        @state['email']['from'] = interpolate_command(@state['email']['from'])
       end
       if @state.has_key?('sms')
         invalid("task sms recipients is missing") unless @state['sms'].has_key?('recipients') && @state['sms']['recipients'].is_a?(String) || @state['sms']['recipients'].is_a?(Array)
         invalid("task sms from is missing") unless @state['sms'].has_key?('from') && @state['sms']['from'].is_a?(String)
+        @state['sms']['from'] = interpolate_command(@state['sms']['from'])
       end
       if @state.has_key?('defaults')
         invalid("defaults must be hash") unless @state['defaults'].is_a?(Hash)
@@ -179,6 +181,7 @@ module Orchestrator
         end
       end
       invalid("task description is missing or invalid") unless @state.has_key?('description') && @state['description'].is_a?(String)
+      @state['description'] = interpolate_command(@state['description'])
       invalid("task save must be boolean") if @state.has_key?('save') && !!@state['save'] != @state['save']
       @state['save'] = false unless @state.has_key?('save')
       invalid("task steps is missing") unless @state.has_key?('steps')
