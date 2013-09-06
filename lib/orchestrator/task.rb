@@ -4,7 +4,6 @@ require 'yaml'
 require 'timeout'
 require 'formatador'
 require 'fileutils'
-require 'pp'
 
 module Orchestrator
 
@@ -57,7 +56,8 @@ module Orchestrator
           end
         end
 
-        @state = @options.reset ? YAML.load_file(@options.statefile) : @settings['orchestrator'][@options.name]
+        @state = (File.exist?(@options.statefile) && !@options.reset) ? YAML.load_file(@options.statefile) : @settings['orchestrator'][@options.name]
+
         @state['pid'] = Process.pid
 
         @statefile_handle = File.open(@options.statefile, "w")
@@ -68,10 +68,10 @@ module Orchestrator
           @children.each do |pid, command|
             begin
               Process.kill("TERM", pid)
+              puts "KILLED #{pid}: #{command}\n" if @options.verbose
+              @log += "KILLED #{pid}: #{command}\n"
             rescue Errno::ESRCH
             end
-            puts "KILLED #{pid}: #{command}\n" if @options.verbose
-            @log += "KILLED #{pid}: #{command}\n"
           end
           puts "KILLED ORCHESTRATOR\n" if @options.verbose
           @log += "KILLED ORCHESTRATOR\n"
@@ -246,14 +246,21 @@ module Orchestrator
         end
       rescue Timeout::Error
         status = 'TIMEOUT'
+        if child
+          begin
+            Process.kill("TERM", child)
+            result += "\nKILLED #{child}: #{command}\n"
+          rescue Errno::ESRCH
+          end
+        end
       end
-
-      @children.delete(child) if child
 
       #  runtime = Time.now - start
       #  runtime = runtime > 60 ? runtime/60 : runtime
 
       @mutex.synchronize do
+        @children.delete(child) if child
+
         output = <<-EOF
 
 Running: #{command} - #{status}

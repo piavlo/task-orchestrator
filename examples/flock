@@ -1,0 +1,12 @@
+orchestrator:
+  statedir: states
+  flock:
+    description: flocking statefile test
+    save: true
+    steps:
+      - type: sequential
+        scripts:
+           - command: sleep 10
+           - command: sleep 10
+           - command: sleep 10
+           - command: sleep 10
