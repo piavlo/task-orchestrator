@@ -52,7 +52,16 @@ module Orchestrator
                 @got_lock = file.flock( File::LOCK_NB | File::LOCK_EX )
               end
             end
-            invalid("The state file #{@options.statefile} is already locked by other process") unless @got_lock
+            unless @got_lock
+              unless @options.wait
+                invalid("The state file #{@options.statefile} is already locked by other process")
+              else
+                Formatador.display_line("[yellow]WARN[/]: Blocking until already running process ends")
+                File.open(@options.statefile, "r") do |file|
+                  @got_lock = file.flock( File::LOCK_EX )
+                end
+              end
+            end
           end
         end
 

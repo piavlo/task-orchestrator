@@ -37,6 +37,9 @@ module Orchestrator
       options.kill = false
       parser.on( '--kill', 'Kill running task based on statefile pid then lock can not be acquired' ) { options.kill = true }
 
+      options.wait = false
+      parser.on( '--wait', 'Wait until already running task based on statefile pid finish running' ) { options.wait = true }
+
       parser.on( '--args ARGS,', Array, 'extra args for interpolation as arg1=val1,arg2=val2,...]' ) do |extra_args|
         extra_args.each do |extra_arg|
           arg,val = extra_arg.split('=')
