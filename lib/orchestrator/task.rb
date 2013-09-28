@@ -65,7 +65,18 @@ module Orchestrator
           end
         end
 
-        @state = (File.exist?(@options.statefile) && !@options.reset) ? YAML.load_file(@options.statefile) : @settings['orchestrator'][@options.name]
+        if File.exist?(@options.statefile)
+          if @options.reset
+            @state = @settings['orchestrator'][@options.name]
+          elsif @options.resume
+            @state = YAML.load_file(@options.statefile)
+          else
+            Formatador.display_line("[red]ERROR[/]: statefile #{@options.statefile} already exists, use --resume or --reset")
+            exit 1
+          end
+        else
+          @state = @settings['orchestrator'][@options.name]
+        end
 
         @state['pid'] = Process.pid
 

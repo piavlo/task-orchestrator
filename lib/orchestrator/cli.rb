@@ -19,20 +19,23 @@ module Orchestrator
         options.args.instance_variable_set(:@config,config)
       end
 
-      options.statefile = nil
       options.name = nil
       parser.on( '--name NAME', 'Name of the cron job to run' ) do |name|
         options.name = name
         options.args.instance_variable_set(:@name,name)
       end
 
+      options.statefile = nil
       parser.on( '--statefile PATH', String, 'Path to state file yaml' ) do |statefile|
         options.statefile = statefile
         options.args.instance_variable_set(:@statefile,statefile)
       end
 
       options.reset = false
-      parser.on( '--reset', 'Do not use state file if it exists' ) { options.reset = true }
+      parser.on( '--reset', 'Delete state file if it exists' ) { options.reset = true }
+
+      options.resume = false
+      parser.on( '--resume', 'Resume from statefile if it exists' ) { options.resume = true }
 
       options.kill = false
       parser.on( '--kill', 'Kill running task based on statefile pid then lock can not be acquired' ) { options.kill = true }
@@ -63,6 +66,16 @@ module Orchestrator
       unless options.name
         puts parser
         exit 1 
+      end
+
+      if options.reset && options.resume
+        Formatador.display_line("[red]ERROR[/]: --resume or --reset options are mutualy exclusive")
+        exit 1
+      end
+
+      if options.wait && options.kill
+        Formatador.display_line("[red]ERROR[/]: --wait or --kill options are mutualy exclusive")
+        exit 1
       end
 
       options
