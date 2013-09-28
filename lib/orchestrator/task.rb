@@ -99,6 +99,7 @@ module Orchestrator
 
     def invalid(reason)
       Formatador.display_line("[red]ERROR[/]: #{reason}")
+      FileUtils.rm_f(@options.statefile) if @options.statefile
       exit 1
     end
 
