@@ -1,0 +1,15 @@
+orchestrator:
+  statedir: states
+  conditionals:
+    description: conditionals test
+    save: true
+    defaults:
+      envs:
+        ANSWER: "no"
+    steps:
+      - type: sequential
+        scripts:
+          - command: "echo The answer is :::ENV.ANSWER:::"
+          - command: "echo OK"
+            condition: "test X:::ENV.ANSWER::: == Xyes"
+          - command: "ecxho THE END"

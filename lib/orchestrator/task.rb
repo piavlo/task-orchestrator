@@ -164,7 +164,7 @@ module Orchestrator
          command = { 'command' => interpolate_command(command) }
       elsif command.is_a?(Hash)
         invalid(error_prefix + " is missing command attribute") unless command.has_key?('command')
-        ['command', 'ok_handler', 'failure_handler'].each do |attribute|
+        ['command', 'ok_handler', 'failure_handler', 'condition'].each do |attribute|
           if command.has_key?(attribute)
             invalid(error_prefix + " #{attribute} attribute is invalid") unless command[attribute].is_a?(String)
             command[attribute] = interpolate_command(command[attribute])
@@ -393,6 +393,11 @@ EOF
 
           step['scripts'].each_index do |index|
             next if step['scripts'][index].has_key?('status') and step['scripts'][index]['status'] == 'OK'
+            if step['scripts'][index].has_key?('condition') and 'OK' != run_command(step['scripts'][index]['condition'], 0)
+              step['scripts'][index]['status'] = "SKIPED"
+              save_state
+              next
+            end
             loop do
               @mutex.synchronize do
                 running_threads = @threads.length
@@ -421,6 +426,11 @@ EOF
           step['scripts'].each_index do |index|
             failures = 0
             next if step['scripts'][index].has_key?('status') and step['scripts'][index]['status'] == 'OK'
+            if step['scripts'][index].has_key?('condition') and 'OK' != run_command(step['scripts'][index]['condition'], 0)
+              step['scripts'][index]['status'] = "SKIPED"
+              save_state
+              next
+            end
             loop do
               @statuses[index] = run_script(step['scripts'][index])
               break if @statuses[index]
