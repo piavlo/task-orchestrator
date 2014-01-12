@@ -135,6 +135,9 @@ module Orchestrator
         invalid("interpolation type is not valid in this context - :::#{match}:::") if match !~ pattern and match =~ /^(ENV|ARG|EXEC)\./
 
         case match
+        when /^LOOP$/
+          invalid("command interpolation failed not loop type step") unless @loop_param
+          @loop_param
         when /^ENV\./
           env = match["ENV.".length..-1]
           invalid("command interpolation failed no such env variable - #{env}") if !ENV[env] and !@defaults[:envs].instance_variable_defined?("@#{env}")
@@ -212,10 +215,25 @@ module Orchestrator
         invalid("task step has no type") unless step.has_key?('type') && step['type'].is_a?(String)
         invalid("task step type #{step['type']} is invalid") unless [:parallel,:sequential].find_index(step['type'].to_sym)
         invalid("task step scripts is missing or invalid") unless step.has_key?('scripts') && step['scripts'].is_a?(Array)
-        step['failure_handler'] = validate_command(step['failure_handler'], 'task failure handler') if step.has_key?('failure_handler')
-        step['scripts'].each_index do |index|
-          step['scripts'][index] = validate_command(step['scripts'][index], 'task step script')
+        if step.has_key?('loop')
+          invalid("task step loop is not array") unless step['loop'].is_a?(Array)
+          scripts = []
+          step['loop'].each do |item|
+            @loop_param = item
+            step['scripts'].each_index do |index|
+              script = Marshal.load(Marshal.dump(step['scripts'][index]))
+              scripts << validate_command(script, 'task step looped script')
+            end
+            @loop_param = nil
+          end
+          step['scripts'] = scripts
+          step.delete('loop')
+        else
+          step['scripts'].each_index do |index|
+            step['scripts'][index] = validate_command(step['scripts'][index], 'task step script')
+          end
         end
+        step['failure_handler'] = validate_command(step['failure_handler'], 'task failure handler') if step.has_key?('failure_handler')
       end
     end
 

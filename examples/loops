@@ -1,0 +1,11 @@
+orchestrator:
+  statedir: states
+  loop:
+    description: loop test
+    save: true
+    steps:
+      - type: sequential
+        loop: [1,2,3,4,5,zopa]
+        scripts:
+          - command: "echo :::LOOP:::"
+          - command: sleep 0.1
