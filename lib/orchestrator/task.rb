@@ -410,7 +410,7 @@ EOF
           running_threads = 0
 
           step['scripts'].each_index do |index|
-            next if step['scripts'][index].has_key?('status') and step['scripts'][index]['status'] == 'OK'
+            next if step['scripts'][index].has_key?('status') and ['OK','SKIPED'].find_index(step['scripts'][index]['status'])
             if step['scripts'][index].has_key?('condition') and 'OK' != run_command(step['scripts'][index]['condition'], 0)
               step['scripts'][index]['status'] = "SKIPED"
               save_state
@@ -443,7 +443,7 @@ EOF
 
           step['scripts'].each_index do |index|
             failures = 0
-            next if step['scripts'][index].has_key?('status') and step['scripts'][index]['status'] == 'OK'
+            next if step['scripts'][index].has_key?('status') and ['OK','SKIPED'].find_index(step['scripts'][index]['status'])
             if step['scripts'][index].has_key?('condition') and 'OK' != run_command(step['scripts'][index]['condition'], 0)
               step['scripts'][index]['status'] = "SKIPED"
               save_state
