@@ -22,12 +22,12 @@ module Orchestrator
       @defaults[:envs] = Object.new
       @defaults[:args] = Object.new
 
-      invalid("config file #{config} does not exists") unless File.exist?(@options.config)
+      bail("config file #{config} does not exists") unless File.exist?(@options.config)
 
       @settings = YAML.load_file(@options.config)
-      invalid("no task job #{@options.name} is defined in settings file") unless @settings['orchestrator'].has_key?(@options.name)
+      bail("no task job #{@options.name} is defined in settings file") unless @settings['orchestrator'].has_key?(@options.name)
 
-      invalid("no statedir is defined in settings file") if @settings['orchestrator'][@options.name]['save'] && !@settings['orchestrator'].has_key?('statedir')
+      bail("no statedir is defined in settings file") if @settings['orchestrator'][@options.name]['save'] && !@settings['orchestrator'].has_key?('statedir')
       unless @options.statefile
         if @settings['orchestrator'][@options.name]['save']
           @options.statefile = @settings['orchestrator']['statedir'] + "/" + @options.name
@@ -54,7 +54,7 @@ module Orchestrator
             end
             unless @got_lock
               unless @options.wait
-                invalid("The state file #{@options.statefile} is already locked by other process")
+                bail("The state file #{@options.statefile} is already locked by other process")
               else
                 Formatador.display_line("[yellow]WARN[/]: Blocking until already running process ends")
                 File.open(@options.statefile, "r") do |file|
@@ -106,6 +106,11 @@ module Orchestrator
 
       @options.sms = false unless @state.has_key?('sms')
       @options.sms_on_success = (@options.sms and @state['sms'].has_key?('on_success')) ? @state['sms']['on_success'] : false
+    end
+
+    def bail(reason)
+      Formatador.display_line("[red]ERROR[/]: #{reason}")
+      exit 1
     end
 
     def invalid(reason)
