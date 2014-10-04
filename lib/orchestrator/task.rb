@@ -172,7 +172,7 @@ module Orchestrator
          command = { 'command' => interpolate_command(command) }
       elsif command.is_a?(Hash)
         invalid(error_prefix + " is missing command attribute") unless command.has_key?('command')
-        ['command', 'ok_handler', 'failure_handler', 'condition'].each do |attribute|
+        ['command', 'ok_handler', 'failure_handler', 'retry_handler', 'condition'].each do |attribute|
           if command.has_key?(attribute)
             invalid(error_prefix + " #{attribute} attribute is invalid") unless command[attribute].is_a?(String)
             command[attribute] = interpolate_command(command[attribute])
@@ -239,6 +239,7 @@ module Orchestrator
           end
         end
         step['failure_handler'] = validate_command(step['failure_handler'], 'task failure handler') if step.has_key?('failure_handler')
+        step['retry_handler'] = validate_command(step['retry_handler'], 'task retry handler') if step.has_key?('retry_handler')
       end
     end
 
@@ -382,6 +383,10 @@ EOF
 
         failures += 1
         break if @retries < failures
+        if script.has_key?('retry_handler')
+          timeout = script.has_key?('timeout') ? script['timeout'].to_i : @timeout
+          run_command(script['retry_handler'],timeout)
+        end
         sleep @retry_delay
       end
 
@@ -459,6 +464,10 @@ EOF
               break if @statuses[index]
               failures += 1
               break if failures > @retries
+              if step['scripts'][index].has_key?('retry_handler')
+                timeout = step['scripts'][index].has_key?('timeout') ? step['scripts'][index]['timeout'].to_i : @timeout
+                run_command(step['scripts'][index]['retry_handler'],timeout)
+              end
               sleep @retry_delay
             end
             run_post_script_handlers(step['scripts'][index],@statuses[index])

@@ -1,0 +1,20 @@
+orchestrator:
+  statedir: states
+  retry_handler:
+    description: retry handler test
+    save: true
+    steps:
+      - type: sequential
+        retries: 3
+        retry_delay: 1
+        on_failure: ignore
+        scripts:
+          - command: "bad bad command"
+            retry_handler: "echo Retry Handler"
+      - type: parallel
+        retries: 3
+        retry_delay: 1
+        on_failure: ignore
+        scripts:
+          - command: "bad bad parallel command"
+            retry_handler: "echo Retry Parallel Handler"
