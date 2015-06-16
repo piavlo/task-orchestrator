@@ -185,6 +185,7 @@ module Orchestrator
     end
 
     def validate_config
+      @state['ok_handler'] = validate_command(@state['ok_handler'], 'task success handler') if @state.has_key?('ok_handler')
       @state['failure_handler'] = validate_command(@state['failure_handler'], 'task failure handler') if @state.has_key?('failure_handler')
       if @state.has_key?('email')
         invalid("config email recipients is missing or invalid") unless @state['email'].has_key?('recipients') && @state['email']['recipients'].is_a?(String) || @state['email']['recipients'].is_a?(Array)
@@ -265,6 +266,7 @@ module Orchestrator
     end
 
     def notify
+      run_script(@state['ok_handler']) if @state.has_key?('ok_handler')
       Pony.mail(
         :to => @state['email']['recipients'],
         :from => @state['email']['from'],
