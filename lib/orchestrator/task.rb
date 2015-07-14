@@ -130,6 +130,7 @@ module Orchestrator
           end
           @statefile_handle.rewind
           YAML.dump(@state, @statefile_handle)
+          @statefile_handle.truncate(@statefile_handle.pos)
         end
       end
     end
@@ -482,6 +483,7 @@ EOF
         end
       end
 
+      @statefile_handle.close unless @statefile_handle.closed?
       FileUtils.rm_f(@options.statefile) if @options.statefile
       notify
     end
