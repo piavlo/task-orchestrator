@@ -142,6 +142,11 @@ module Orchestrator
         invalid("interpolation type is not valid in this context - :::#{match}:::") if match !~ pattern and match =~ /^(ENV|ARG|EXEC)\./
 
         case match
+        when /^LOOP\.\d$/
+          require 'pp'
+          invalid("command interpolation failed not nested loop type step") unless @nested_loop_param
+          i = match.match(/^LOOP\.(\d)$/)[1].to_i
+          @nested_loop_param[i] ? @nested_loop_param[i] : invalid("command interpolation failed unexisting nesting #{match}")
         when /^LOOP$/
           invalid("command interpolation failed not loop type step") unless @loop_param
           @loop_param
@@ -238,6 +243,30 @@ module Orchestrator
           end
           step['scripts'] = scripts
           step.delete('loop')
+        elsif step.has_key?('nested_loop')
+          invalid("task step nested loop is not array") unless step['nested_loop'].is_a?(Array)
+          step['nested_loop'].each do |loop|
+            invalid("task step nested loop is not array of arrays") unless loop.is_a?(Array)
+          end
+          scripts = []
+          loops = step['nested_loop'].inject([[]]) do |tuples, array|
+            tuples.inject([]) do |agg, tuple|
+              array.each do |x|
+                agg << [*tuple, x]
+              end
+              agg
+            end
+          end
+          loops.each do |item|
+            @nested_loop_param = item
+            step['scripts'].each_index do |index|
+              script = Marshal.load(Marshal.dump(step['scripts'][index]))
+              scripts << validate_command(script, 'task step nested loop script')
+            end
+            @nested_loop_param = nil
+          end
+          step['scripts'] = scripts
+          step.delete('nested_loop')
         else
           step['scripts'].each_index do |index|
             step['scripts'][index] = validate_command(step['scripts'][index], 'task step script')

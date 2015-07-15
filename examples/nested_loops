@@ -1,0 +1,10 @@
+orchestrator:
+  statedir: states
+  nested_loop:
+    description: nested loop test
+    save: true
+    steps:
+      - type: sequential
+        nested_loop: [[a,b],[x,y],[1,2]]
+        scripts:
+          - command: "echo :::LOOP.0::: :::LOOP.1::: :::LOOP.2:::"
