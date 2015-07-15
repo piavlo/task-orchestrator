@@ -337,7 +337,7 @@ module Orchestrator
         status = 'TIMEOUT'
         if child
           begin
-            `/bin/ps --ppid #{child} -o pid=`.split(/\n/).each{|p| Process.kill("TERM", p)}
+            `/bin/ps --ppid #{child} -o pid=`.split(/\n/).each{|p| Process.kill("TERM", p.to_i)}
             Process.kill("TERM", child)
             result += "\nKILLED #{child}: #{command}\n"
           rescue Errno::ESRCH
