@@ -14,3 +14,13 @@ orchestrator:
           - command: echo 3
           - command: echo 4
           - command: echo 5
+      - type: parallel
+        parallel: 3
+        parallel_spawn_delay: 2
+        sleep: 0.1
+        scripts:
+          - command: date +%S
+          - command: date +%S
+          - command: date +%S
+          - command: date +%S
+          - command: date +%S

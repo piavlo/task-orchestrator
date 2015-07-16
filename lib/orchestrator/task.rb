@@ -448,6 +448,7 @@ EOF
         if step['type'].to_sym == :parallel and @on_week_days.map {|d| Time.now.send(d) }.find_index(true) and @on_month_days.find_index(Time.now.mday)
           #Parallel
           interval = step.has_key?('sleep') ? step['sleep'] : 1
+          parallel_spawn_delay =  step.has_key?('parallel_spawn_delay') ? step['parallel_spawn_delay'] : 0.1
           parallel_factor = step.has_key?('parallel') ? step['parallel'] : 1
           @on_failure = step.has_key?('on_failure') ? step['on_failure'].to_sym : :finish
 
@@ -469,6 +470,7 @@ EOF
               break if @on_failure == :wait and @statuses.find_index(false)
               if parallel_factor > running_threads
                 @threads[index] = Thread.new { thread_wrapper(index, step['scripts'][index]) }
+                sleep parallel_spawn_delay if index < parallel_factor - 1
                 break
               end
               sleep interval
