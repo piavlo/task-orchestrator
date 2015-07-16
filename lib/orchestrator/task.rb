@@ -513,9 +513,11 @@ EOF
         end
       end
 
-      @statefile_handle.close unless @statefile_handle.closed?
-      FileUtils.rm_f(@options.statefile) if @options.statefile
       notify
+      if @options.statefile
+        @statefile_handle.close unless @statefile_handle.closed?
+        FileUtils.rm_f(@options.statefile)
+      end
     end
 
   end
