@@ -453,7 +453,7 @@ EOF
           @on_failure = step.has_key?('on_failure') ? step['on_failure'].to_sym : :finish
 
           @threads = Hash.new
-          index = 0
+          invoked = 0
           running_threads = 0
 
           step['scripts'].each_index do |index|
@@ -470,7 +470,8 @@ EOF
               break if @on_failure == :wait and @statuses.find_index(false)
               if parallel_factor > running_threads
                 @threads[index] = Thread.new { thread_wrapper(index, step['scripts'][index]) }
-                sleep parallel_spawn_delay if index < parallel_factor - 1
+                invoked += 1
+                sleep parallel_spawn_delay if invoked < parallel_factor
                 break
               end
               sleep interval
