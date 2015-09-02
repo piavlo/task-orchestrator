@@ -315,7 +315,7 @@ module Orchestrator
       ) if @options.sms and @options.sms_on_success
     end
 
-    def run_command(command,timeout)
+    def run_command(command,timeout,success_codes = [0])
       result = ""
       error = ""
 
@@ -331,7 +331,8 @@ module Orchestrator
             result = stdout.read.strip
             error = stderr.read.strip
           end
-          status = (status.nil? or status.exitstatus != 0) ? 'FAILED' : 'OK'
+          status = (status.nil? or !success_codes.include?(status.exitstatus)) ? 'FAILED' : 'OK'
+          puts command + " - STATUS: " + status if @verbose
         end
       rescue Timeout::Error
         status = 'TIMEOUT'
@@ -383,10 +384,17 @@ EOF
 
     def run_script(script)
       timeout = script.has_key?('timeout') ? script['timeout'].to_i : @timeout
+      if script.has_key?('success_codes')
+        success_codes = (script['success_codes'].kind_of?(String) || script['success_codes'].kind_of?(Integer)) ? [script['success_codes'].to_i] : nil
+        success_codes ||= (script['success_codes'].kind_of?(Array) && script['success_codes'].all? {|i| i.kind_of?(Integer) }) ? script['success_codes'] : nil
+        bail("Bad success_codes. Expected String, Integer or Array of Integers for command:\n" + script['command']) unless success_codes
+      else
+        success_codes = [0]
+      end
 
       script['status'] = 'STARTED'
       save_state
-      script['status'] = run_command(script['command'],timeout)
+      script['status'] = run_command(script['command'], timeout, success_codes)
       save_state
     
       return script['status'] == 'OK'
